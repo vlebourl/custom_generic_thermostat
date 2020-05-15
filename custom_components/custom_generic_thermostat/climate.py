@@ -340,14 +340,14 @@ class CustomGenericThermostat(ClimateDevice, RestoreEntity):
     def preset_modes(self):
         """Return a list of available preset modes or PRESET_NONE if _away_temp is undefined."""
         preset_modes = [PRESET_NONE]
+        if self._anti_freeze_temp:
+            preset_modes.append(PRESET_ANTI_FREEZE)
         if self._away_temp:
             preset_modes.append(PRESET_AWAY)
         if self._eco_temp:
             preset_modes.append(PRESET_ECO)
         if self._comfort_temp:
             preset_modes.append(PRESET_COMFORT)
-        if self._anti_freeze_temp:
-            preset_modes.append(PRESET_ANTI_FREEZE)
         return preset_modes
 
     async def async_set_hvac_mode(self, hvac_mode):
