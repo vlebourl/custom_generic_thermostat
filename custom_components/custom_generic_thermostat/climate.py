@@ -118,7 +118,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
     async_add_entities(
         [
-            GenericThermostat(
+            CustomGenericThermostat(
                 name,
                 heater_entity_id,
                 sensor_entity_id,
@@ -142,7 +142,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     )
 
 
-class GenericThermostat(ClimateEntity, RestoreEntity):
+class CustomGenericThermostat(ClimateEntity, RestoreEntity):
     """Representation of a Generic Thermostat device."""
 
     def __init__(

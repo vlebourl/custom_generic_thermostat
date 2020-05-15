@@ -1,1 +1,1 @@
-"""The generic_thermostat component."""
+"""The custom_generic_thermostat component."""
