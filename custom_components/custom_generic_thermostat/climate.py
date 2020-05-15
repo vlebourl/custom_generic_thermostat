@@ -196,7 +196,10 @@ class CustomGenericThermostat(ClimateDevice, RestoreEntity):
         self._eco_temp = eco_temp
         self._comfort_temp = comfort_temp
         self._anti_freeze_temp = anti_freeze_temp
-        self._current_preset = PRESET_NONE
+        self._is_away = False
+        self._is_eco = False
+        self._is_comfort = False
+        self._is_anti_freeze = False
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
@@ -322,7 +325,16 @@ class CustomGenericThermostat(ClimateDevice, RestoreEntity):
     @property
     def preset_mode(self):
         """Return the current preset mode, e.g., home, away, temp."""
-        return self._current_preset
+        if self._is_away:
+            return PRESET_AWAY
+        elif self._is_eco:
+            return PRESET_ECO
+        elif self._is_comfort:
+            return PRESET_COMFORT
+        elif self._is_anti_freeze:
+            return PRESET_ANTI_FREEZE
+        else:
+            return PRESET_NONE
 
     @property
     def preset_modes(self):
@@ -487,29 +499,44 @@ class CustomGenericThermostat(ClimateDevice, RestoreEntity):
 
     async def async_set_preset_mode(self, preset_mode: str):
         """Set new preset mode."""
-        if preset_mode == PRESET_AWAY:
+        if preset_mode == PRESET_AWAY and not self._is_away:
+            self._is_away = True
+            self._is_eco = False
+            self._is_comfort = False
+            self._is_anti_freeze = False
             self._saved_target_temp = self._target_temp
             self._target_temp = self._away_temp
-            self._current_preset = PRESET_AWAY
             await self._async_control_heating(force=True)
-        elif preset_mode == PRESET_ECO:
+        elif preset_mode == PRESET_ECO and not self._is_eco:
+            self._is_away = False
+            self._is_eco = True
+            self._is_comfort = False
+            self._is_anti_freeze = False
             self._saved_target_temp = self._target_temp
             self._target_temp = self._eco_temp
-            self._current_preset = PRESET_ECO
             await self._async_control_heating(force=True)
-        elif preset_mode == PRESET_COMFORT:
+        elif preset_mode == PRESET_COMFORT and not self._is_comfort:
+            self._is_away = False
+            self._is_eco = False
+            self._is_comfort = True
+            self._is_anti_freeze = False
             self._saved_target_temp = self._target_temp
             self._target_temp = self._comfort_temp
-            self._current_preset = PRESET_COMFORT
             await self._async_control_heating(force=True)
-        elif preset_mode == PRESET_ANTI_FREEZE:
+        elif preset_mode == PRESET_ANTI_FREEZE and not self._is_anti_freeze:
+            self._is_away = False
+            self._is_eco = False
+            self._is_comfort = False
+            self._is_anti_freeze = True
             self._saved_target_temp = self._target_temp
             self._target_temp = self._anti_freeze_temp
-            self._current_preset = PRESET_ANTI_FREEZE
             await self._async_control_heating(force=True)
-        elif preset_mode == PRESET_NONE:
+        elif preset_mode == PRESET_NONE and (self._is_away or self._is_eco or self._is_comfort or self._is_anti_freeze):
+            self._is_away = False      
+            self._is_eco = False       
+            self._is_comfort = False   
+            self._is_anti_freeze = False
             self._target_temp = self._saved_target_temp
-            self._current_preset = PRESET_NONE
             await self._async_control_heating(force=True)
 
         self.async_write_ha_state()
