@@ -4,7 +4,7 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateEntity
+from homeassistant.components.climate import PLATFORM_SCHEMA, ClimateDevice
 from homeassistant.components.climate.const import (
     ATTR_PRESET_MODE,
     CURRENT_HVAC_COOL,
@@ -142,7 +142,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     )
 
 
-class CustomGenericThermostat(ClimateEntity, RestoreEntity):
+class CustomGenericThermostat(ClimateDevice, RestoreEntity):
     """Representation of a Generic Thermostat device."""
 
     def __init__(
