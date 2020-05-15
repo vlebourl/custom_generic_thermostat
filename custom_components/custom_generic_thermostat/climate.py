@@ -490,21 +490,26 @@ class CustomGenericThermostat(ClimateDevice, RestoreEntity):
         if preset_mode == PRESET_AWAY:
             self._saved_target_temp = self._target_temp
             self._target_temp = self._away_temp
+            self._current_preset = PRESET_AWAY
             await self._async_control_heating(force=True)
         elif preset_mode == PRESET_ECO:
             self._saved_target_temp = self._target_temp
             self._target_temp = self._eco_temp
+            self._current_preset = PRESET_ECO
             await self._async_control_heating(force=True)
         elif preset_mode == PRESET_COMFORT:
             self._saved_target_temp = self._target_temp
             self._target_temp = self._comfort_temp
+            self._current_preset = PRESET_COMFORT
             await self._async_control_heating(force=True)
         elif preset_mode == PRESET_ANTI_FREEZE:
             self._saved_target_temp = self._target_temp
             self._target_temp = self._anti_freeze_temp
+            self._current_preset = PRESET_ANTI_FREEZE
             await self._async_control_heating(force=True)
         elif preset_mode == PRESET_NONE:
             self._target_temp = self._saved_target_temp
+            self._current_preset = PRESET_NONE
             await self._async_control_heating(force=True)
 
         self.async_write_ha_state()
