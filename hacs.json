@@ -1,0 +1,5 @@
+{
+  	"name": "Custom Generic Thermostat",
+	"render_readme": true,
+	"domain": ["climate"]
+}
