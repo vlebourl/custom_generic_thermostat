@@ -147,7 +147,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     )
 
 
-class CustomGenericThermostat(ClimateDevice, RestoreEntity):
+class CustomGenericThermostat(ClimateEntity, RestoreEntity):
     """Representation of a Generic Thermostat device."""
 
     def __init__(
