@@ -22,6 +22,7 @@ from homeassistant.components.climate.const import (
     PRESET_AWAY,
     PRESET_ECO,
     PRESET_COMFORT,
+    PRESET_HOME,
     PRESET_NONE,
     SUPPORT_PRESET_MODE,
     SUPPORT_TARGET_TEMPERATURE,
@@ -30,6 +31,7 @@ from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
     CONF_NAME,
+    CONF_UNIQUE_ID,
     EVENT_HOMEASSISTANT_START,
     PRECISION_HALVES,
     PRECISION_TENTHS,
@@ -68,6 +70,7 @@ CONF_INITIAL_HVAC_MODE = "initial_hvac_mode"
 CONF_AWAY_TEMP = "away_temp"
 CONF_ECO_TEMP = "eco_temp"
 CONF_COMFORT_TEMP = "comfort_temp"
+CONF_AT_HOME_TEMP = "at_home_temp"
 CONF_ANTI_FREEZE_TEMP = "anti_freeze_temp"
 CONF_PRECISION = "precision"
 PRESET_ANTI_FREEZE = "Anti Freeze"
@@ -92,10 +95,12 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_AWAY_TEMP): vol.Coerce(float),
         vol.Optional(CONF_ECO_TEMP): vol.Coerce(float),
         vol.Optional(CONF_COMFORT_TEMP): vol.Coerce(float),
+        vol.Optional(CONF_AT_HOME_TEMP): vol.Coerce(float),
         vol.Optional(CONF_ANTI_FREEZE_TEMP): vol.Coerce(float),
         vol.Optional(CONF_PRECISION): vol.In(
             [PRECISION_TENTHS, PRECISION_HALVES, PRECISION_WHOLE]
         ),
+        vol.Optional(CONF_UNIQUE_ID): cv.string,
     }
 )
 
@@ -117,9 +122,11 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     away_temp = config.get(CONF_AWAY_TEMP)
     eco_temp = config.get(CONF_ECO_TEMP)
     comfort_temp = config.get(CONF_COMFORT_TEMP)
+    at_home_temp = config.get(CONF_AT_HOME_TEMP)
     anti_freeze_temp = config.get(CONF_ANTI_FREEZE_TEMP)
     precision = config.get(CONF_PRECISION)
     unit = hass.config.units.temperature_unit
+    unique_id = config.get(CONF_UNIQUE_ID)
 
     async_add_entities(
         [
@@ -139,9 +146,11 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 away_temp,
                 eco_temp,
                 comfort_temp,
+                at_home_temp,
                 anti_freeze_temp,
                 precision,
                 unit,
+                unique_id,
             )
         ]
     )
@@ -167,9 +176,11 @@ class CustomGenericThermostat(ClimateEntity, RestoreEntity):
         away_temp,
         eco_temp,
         comfort_temp,
+        at_home_temp,
         anti_freeze_temp,
         precision,
         unit,
+        unique_id,
     ):
         """Initialize the thermostat."""
         self._name = name
@@ -181,7 +192,14 @@ class CustomGenericThermostat(ClimateEntity, RestoreEntity):
         self._hot_tolerance = hot_tolerance
         self._keep_alive = keep_alive
         self._hvac_mode = initial_hvac_mode
-        self._saved_target_temp = target_temp or comfort_temp or away_temp or eco_temp or anti_freeze_temp
+        self._saved_target_temp = (
+            target_temp
+            or comfort_temp
+            or at_home_temp
+            or away_temp
+            or eco_temp
+            or anti_freeze_temp
+        )
         self._temp_precision = precision
         if self.ac_mode:
             self._hvac_list = [HVAC_MODE_COOL, HVAC_MODE_OFF]
@@ -195,15 +213,18 @@ class CustomGenericThermostat(ClimateEntity, RestoreEntity):
         self._target_temp = target_temp
         self._unit = unit
         self._support_flags = SUPPORT_FLAGS
-        if away_temp or eco_temp or comfort_temp or anti_freeze_temp :
+        self._unique_id = unique_id
+        if away_temp or eco_temp or comfort_temp or at_home_temp or anti_freeze_temp:
             self._support_flags = SUPPORT_FLAGS | SUPPORT_PRESET_MODE
         self._away_temp = away_temp
         self._eco_temp = eco_temp
         self._comfort_temp = comfort_temp
+        self._at_home_temp = at_home_temp
         self._anti_freeze_temp = anti_freeze_temp
         self._is_away = False
         self._is_eco = False
         self._is_comfort = False
+        self._is_at_home = False
         self._is_anti_freeze = False
 
     async def async_added_to_hass(self):
@@ -282,6 +303,11 @@ class CustomGenericThermostat(ClimateEntity, RestoreEntity):
         return self._name
 
     @property
+    def unique_id(self):
+        """Return the unique id of this thermostat."""
+        return self._unique_id
+
+    @property
     def precision(self):
         """Return the precision of the system."""
         if self._temp_precision is not None:
@@ -336,6 +362,8 @@ class CustomGenericThermostat(ClimateEntity, RestoreEntity):
             return PRESET_ECO
         elif self._is_comfort:
             return PRESET_COMFORT
+        elif self._is_at_home:
+            return PRESET_HOME
         elif self._is_anti_freeze:
             return PRESET_ANTI_FREEZE
         else:
@@ -347,12 +375,14 @@ class CustomGenericThermostat(ClimateEntity, RestoreEntity):
         preset_modes = [PRESET_NONE]
         if self._anti_freeze_temp:
             preset_modes.append(PRESET_ANTI_FREEZE)
-        if self._away_temp:
-            preset_modes.append(PRESET_AWAY)
         if self._eco_temp:
             preset_modes.append(PRESET_ECO)
+        if self._away_temp:
+            preset_modes.append(PRESET_AWAY)
         if self._comfort_temp:
             preset_modes.append(PRESET_COMFORT)
+        if self._at_home_temp:
+            preset_modes.append(PRESET_HOME)
         return preset_modes
 
     async def async_set_hvac_mode(self, hvac_mode):
@@ -508,6 +538,7 @@ class CustomGenericThermostat(ClimateEntity, RestoreEntity):
             self._is_away = True
             self._is_eco = False
             self._is_comfort = False
+            self._is_at_home = False
             self._is_anti_freeze = False
             self._saved_target_temp = self._target_temp
             self._target_temp = self._away_temp
@@ -516,6 +547,7 @@ class CustomGenericThermostat(ClimateEntity, RestoreEntity):
             self._is_away = False
             self._is_eco = True
             self._is_comfort = False
+            self._is_at_home = False
             self._is_anti_freeze = False
             self._saved_target_temp = self._target_temp
             self._target_temp = self._eco_temp
@@ -524,22 +556,36 @@ class CustomGenericThermostat(ClimateEntity, RestoreEntity):
             self._is_away = False
             self._is_eco = False
             self._is_comfort = True
+            self._is_at_home = False
             self._is_anti_freeze = False
             self._saved_target_temp = self._target_temp
             self._target_temp = self._comfort_temp
+            await self._async_control_heating(force=True)
+        elif preset_mode == PRESET_HOME and not self._is_at_home:
+            self._is_away = False
+            self._is_eco = False
+            self._is_comfort = False
+            self._is_at_home = True
+            self._is_anti_freeze = False
+            self._saved_target_temp = self._target_temp
+            self._target_temp = self._at_home_temp
             await self._async_control_heating(force=True)
         elif preset_mode == PRESET_ANTI_FREEZE and not self._is_anti_freeze:
             self._is_away = False
             self._is_eco = False
             self._is_comfort = False
+            self._is_at_home = False
             self._is_anti_freeze = True
             self._saved_target_temp = self._target_temp
             self._target_temp = self._anti_freeze_temp
             await self._async_control_heating(force=True)
-        elif preset_mode == PRESET_NONE and (self._is_away or self._is_eco or self._is_comfort or self._is_anti_freeze):
-            self._is_away = False      
-            self._is_eco = False       
-            self._is_comfort = False   
+        elif preset_mode == PRESET_NONE and (
+            self._is_away or self._is_eco or self._is_comfort or self._is_anti_freeze
+        ):
+            self._is_away = False
+            self._is_eco = False
+            self._is_comfort = False
+            self._is_at_home = False
             self._is_anti_freeze = False
             self._target_temp = self._saved_target_temp
             await self._async_control_heating(force=True)
